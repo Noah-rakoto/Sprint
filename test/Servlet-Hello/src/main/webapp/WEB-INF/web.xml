@@ -7,7 +7,11 @@
 
     <servlet>
         <servlet-name>SprintFramework</servlet-name>
-        <servlet-class>com.sprint.ProcessRequest</servlet-class>
+        <servlet-class>com.sprint.FrontController</servlet-class>
+        <init-param>
+            <param-name>scan-package</param-name>
+            <param-value>com.test</param-value>
+        </init-param>
     </servlet>
 
     <servlet-mapping>

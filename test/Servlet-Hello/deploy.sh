@@ -1,6 +1,6 @@
 #!/bin/bash
 
-APP_NAME="Spint0"
+APP_NAME="Spint1"
 SRC_DIR="src/main/java"
 WEB_DIR="src/main/webapp"
 BUILD_DIR="build"
@@ -20,23 +20,16 @@ JAKARTA_SERVLET_API="$LIB_DIR/servlet-api.jar"
 # === Vérification et copie automatique du framework JAR ===
 echo "🔍 Vérification du framework JAR..."
 
-# Si le framework JAR n'existe pas dans lib/, on le cherche et on le copie
-if [ ! -f "$FRAMEWORK_JAR_TARGET" ]; then
-    echo "📦 Framework JAR manquant dans lib/, recherche dans le dossier framework..."
-    
-    if [ -f "$FRAMEWORK_JAR_SOURCE" ]; then
-        echo "✅ Framework JAR trouvé dans $FRAMEWORK_JAR_SOURCE"
-        cp "$FRAMEWORK_JAR_SOURCE" "$FRAMEWORK_JAR_TARGET"
-        echo "📋 Framework JAR copié vers $FRAMEWORK_JAR_TARGET"
-    else
-        echo "❌ Framework JAR non trouvé dans $FRAMEWORK_JAR_SOURCE"
-        echo "💡 Compilez d'abord le framework :"
-        echo "   cd ../../framework/framework"
-        echo "   mvn clean install"
-        exit 1
-    fi
+if [ -f "$FRAMEWORK_JAR_SOURCE" ]; then
+    echo "📦 Copie du framework JAR fraîchement compilé..."
+    cp "$FRAMEWORK_JAR_SOURCE" "$FRAMEWORK_JAR_TARGET"
+    echo "📋 Framework JAR copié vers $FRAMEWORK_JAR_TARGET"
 else
-    echo "✅ Framework JAR déjà présent dans lib/"
+    echo "❌ Framework JAR non trouvé dans $FRAMEWORK_JAR_SOURCE"
+    echo "💡 Compilez d'abord le framework :"
+    echo "   cd ../../framework/framework"
+    echo "   mvn clean install"
+    exit 1
 fi
 
 # Vérifier si Jakarta API existe
@@ -90,8 +83,12 @@ cd ..
 
 # Déployer
 if [ -d "$TOMCAT_WEBAPPS" ]; then
-    cp -f $BUILD_DIR/$APP_NAME.war $TOMCAT_WEBAPPS/
-    echo "✅ WAR déployé vers $TOMCAT_WEBAPPS"
+    if cp -f $BUILD_DIR/$APP_NAME.war $TOMCAT_WEBAPPS/; then
+        echo "✅ WAR déployé vers $TOMCAT_WEBAPPS"
+    else
+        echo "⚠️ Déploiement Tomcat impossible dans $TOMCAT_WEBAPPS"
+        echo "📦 WAR généré: $BUILD_DIR/$APP_NAME.war"
+    fi
 else
     echo "⚠️ Répertoire Tomcat non trouvé: $TOMCAT_WEBAPPS"
     echo "📦 WAR généré: $BUILD_DIR/$APP_NAME.war"
