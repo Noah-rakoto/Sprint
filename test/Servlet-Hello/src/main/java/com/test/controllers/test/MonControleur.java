@@ -20,8 +20,8 @@ public class MonControleur {
     public void fonctionNormale() {
     }
 
-    public static void main(String[] args) {
-        GetterMethode scanner = new GetterMethode();
-        scanner.scannerUneClasse(MonControleur.class);
-    }
+    // public static void main(String[] args) {
+    // GetterMethode scanner = new GetterMethode();
+    // scanner.scannerUneClasse(MonControleur.class);
+    // }
 }

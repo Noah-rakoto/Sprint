@@ -59,19 +59,13 @@ public class FrontController extends HttpServlet {
         for (String controller : listeController) {
             try {
                 Class<?> clazz = Class.forName(controller);
-                Object instance = clazz.getDeclaredConstructor().newInstance();
-
                 for (Method method : clazz.getDeclaredMethods()) {
                     if (method.isAnnotationPresent(Methode.class)) {
                         Methode annotation = method.getAnnotation(Methode.class);
                         if (annotation.value().equals(route)) {
-                            Object result = method.invoke(instance);
-                            if (method.getReturnType() != void.class && result != null) {
-                                response.getWriter().println(result.toString());
-                            } else {
-                                response.getWriter().println("Méthode exécutée: " + clazz.getSimpleName() + "." + method.getName() + "()");
-                            }
-                            return;
+                            response.getWriter().println("Exécution de la méthode: " + clazz.getSimpleName() + "."
+                                    + method.getName() + "()");
+                            response.getWriter().println("Route associée: " + annotation.value());
                         }
                     }
                 }
@@ -82,7 +76,6 @@ public class FrontController extends HttpServlet {
                 return;
             }
         }
-
         response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         response.getWriter().println("Aucune route trouvée pour: " + route);
     }
