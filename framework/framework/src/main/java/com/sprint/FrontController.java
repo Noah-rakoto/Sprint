@@ -1,11 +1,13 @@
 package com.sprint;
 
 import com.sprint.utils.Loader;
+import com.sprint.annotation.Methode;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -31,6 +33,7 @@ public class FrontController extends HttpServlet {
                 System.out.println("[Framework]   - " + controller);
             }
         }
+
     }
 
     @Override
@@ -46,13 +49,35 @@ public class FrontController extends HttpServlet {
     }
 
     public void processRequest(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String url = request.getRequestURL().toString();
-        System.out.println("[Framework] URL: " + url);
-        response.getWriter().println("URL reçue: " + url);
-        response.getWriter().println("Controllers détectés:");
+        String contextPath = request.getContextPath();
+        String uri = request.getRequestURI();
+        String route = uri.substring(contextPath.length());
+
+        System.out.println("[Framework] URL: " + uri);
+        response.setContentType("text/plain;charset=UTF-8");
+
         for (String controller : listeController) {
-            response.getWriter().println(controller);
+            try {
+                Class<?> clazz = Class.forName(controller);
+                for (Method method : clazz.getDeclaredMethods()) {
+                    if (method.isAnnotationPresent(Methode.class)) {
+                        Methode annotation = method.getAnnotation(Methode.class);
+                        if (annotation.value().equals(route)) {
+                            response.getWriter().println("Exécution de la méthode: " + clazz.getSimpleName() + "."
+                                    + method.getName() + "()");
+                            response.getWriter().println("Route associée: " + annotation.value());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.getWriter().println("Erreur lors de l'exécution du controller: " + controller);
+                e.printStackTrace();
+                return;
+            }
         }
+        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        response.getWriter().println("Aucune route trouvée pour: " + route);
     }
 
 }
