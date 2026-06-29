@@ -1,6 +1,6 @@
 #!/bin/bash
 
-APP_NAME="Spint2"
+APP_NAME="Spint3"
 SRC_DIR="src/main/java"
 WEB_DIR="src/main/webapp"
 BUILD_DIR="build"

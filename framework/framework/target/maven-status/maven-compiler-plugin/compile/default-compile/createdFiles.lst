@@ -1,5 +1,6 @@
 com/sprint/utils/GetterMethode.class
 com/sprint/utils/Loader.class
+com/sprint/utils/Mapping.class
 com/sprint/annotation/Controller.class
 com/sprint/annotation/Methode.class
 com/sprint/FrontController.class

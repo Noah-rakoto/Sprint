@@ -1,15 +1,19 @@
-package com.test.controllers.test.MonControleur;
+package com.test.controllers.test;
 
 import com.sprint.annotation.Controller;
 import com.sprint.annotation.Methode;
-import com.sprint.utils.GetterMethode;
 
 @Controller
 public class MonControleur {
 
     @Methode("/test")
     public String test() {
-        return "La méthode test a été exécutée !";
+        return "La méthode test (GET) a été exécutée !";
+    }
+
+    @Methode(value = "/test", type = "POST")
+    public String testPost() {
+        return "Données reçues en POST sur /test !";
     }
 
     @Methode("/accueil")
@@ -19,9 +23,4 @@ public class MonControleur {
 
     public void fonctionNormale() {
     }
-
-    // public static void main(String[] args) {
-    // GetterMethode scanner = new GetterMethode();
-    // scanner.scannerUneClasse(MonControleur.class);
-    // }
 }
