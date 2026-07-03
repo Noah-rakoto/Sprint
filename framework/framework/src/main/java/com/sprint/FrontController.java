@@ -1,19 +1,20 @@
 package com.sprint;
 
-import com.sprint.utils.Loader;
-import com.sprint.utils.RouteScanner;
-import com.sprint.utils.Mapping; // Import de ta nouvelle classe utilitaire
+import com.sprint.listener.FrameworkContextListener;
+import com.sprint.utils.Mapping;
+import com.sprint.utils.UrlKey;
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class FrontController extends HttpServlet {
-    List<Mapping> listeMapping = new ArrayList<>();
+    private Map<UrlKey, Mapping> listeMapping = new HashMap<>();
 
     @Override
     public void init() throws ServletException {
@@ -23,8 +24,10 @@ public class FrontController extends HttpServlet {
             scanPackage = "com.test";
         }
 
-        RouteScanner routeScanner = new RouteScanner(new Loader());
-        listeMapping = routeScanner.scanRoutes(scanPackage);
+        ServletContext context = getServletContext();
+        FrameworkContextListener frameworkContextListener = new FrameworkContextListener();
+        frameworkContextListener.initialize(context, scanPackage);
+        listeMapping = frameworkContextListener.getRoutes();
     }
 
     @Override
@@ -46,18 +49,13 @@ public class FrontController extends HttpServlet {
         String route = uri.substring(contextPath.length());
 
         String webMethod = request.getMethod(); // Renvoie "GET" ou "POST"
+        UrlKey routeKey = new UrlKey(route, webMethod);
 
         System.out.println("[Framework] Requête reçue: " + webMethod + " " + uri);
 
         response.setContentType("text/plain;charset=UTF-8");
 
-        Mapping match = null;
-        for (Mapping mapping : listeMapping) {
-            if (mapping.getUrl().equals(route) && mapping.getHttpMethod().equalsIgnoreCase(webMethod)) {
-                match = mapping;
-                break;
-            }
-        }
+        Mapping match = listeMapping.get(routeKey);
 
         // Si on a trouvé un match, on l'exécute
         if (match != null) {
