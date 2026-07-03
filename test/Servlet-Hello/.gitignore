@@ -1,0 +1,15 @@
+# Build outputs
+build/
+target/
+out/
+classes/
+
+# Compiled classes
+*.class
+**/*.class
+
+# IDE / generated files
+.idea/
+.vscode/
+*.iml
+*.log
