@@ -6,21 +6,22 @@ import com.sprint.annotation.Methode;
 @Controller
 public class MonControleur {
 
-    @Methode("/test")
-    public String test() {
-        return "La méthode test (GET) a été exécutée !";
-    }
-
     @Methode(value = "/test", type = "POST")
-    public String testPost() {
-        return "Données reçues en POST sur /test !";
+    public String test() {
+        return "La méthode test (POST) a été exécutée !";
     }
 
-    @Methode("/accueil")
-    public String home() {
+    @Methode(value = "/test", type = "GET")
+    public String testGet() {
+        return "Données reçues en GET sur /test !";
+    }
+
+    @Methode("/Noah")
+    public String Noah() {
         return "Bienvenue sur la page d'accueil";
     }
 
     public void fonctionNormale() {
     }
+    // curl -X POST http://localhost:8080/Spint3/test
 }

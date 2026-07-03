@@ -10,9 +10,4 @@ public class HealthProbe {
     @Methode("/andrana")
     public void andrana() {
     }
-
-    @Methode("/andrana")
-    public void test() {
-    }
-
 }
