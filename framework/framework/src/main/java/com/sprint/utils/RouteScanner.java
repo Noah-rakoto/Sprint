@@ -43,11 +43,11 @@ public class RouteScanner {
                     System.out.println("[Framework] Route enregistrée : [" + httpMethod + "] " + url + " -> "
                             + clazz.getSimpleName() + "." + method.getName() + "()");
                 }
-            } catch (ServletException e) {
-                throw e;
             } catch (Exception e) {
-                throw new ServletException(
-                        "Erreur lors du scan du controller: " + controller, e);
+                if (e instanceof ServletException) {
+                    throw (ServletException) e;
+                }
+                throw new ServletException("Erreur lors du scan du controller: " + controller, e);
             }
         }
     }

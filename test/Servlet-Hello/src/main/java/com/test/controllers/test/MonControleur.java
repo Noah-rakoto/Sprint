@@ -8,7 +8,7 @@ public class MonControleur {
 
     @Methode(value = "/test", type = "POST")
     public String test() {
-        return "La méthode test (POST) a été exécutée !";
+        return "La méthode test (GET) a été exécutée !";
     }
 
     @Methode(value = "/test", type = "GET")

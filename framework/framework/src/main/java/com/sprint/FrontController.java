@@ -62,11 +62,13 @@ public class FrontController extends HttpServlet {
             try {
                 Class<?> clazz = Class.forName(match.getClassName());
                 Method method = clazz.getDeclaredMethod(match.getMethodName());
-                method.invoke(clazz.getDeclaredConstructor().newInstance());
-                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                Object result = method.invoke(clazz.getDeclaredConstructor().newInstance());
+
+                response.setStatus(HttpServletResponse.SC_OK);
                 response.getWriter()
                         .println("Exécution de la méthode: " + clazz.getSimpleName() + "." + method.getName() + "()");
                 response.getWriter().println("Route associée: " + match.getUrl() + " [" + match.getHttpMethod() + "]");
+                response.getWriter().println("Retour de la méthode: " + String.valueOf(result));
                 return; // On arrête la fonction ici, tout s'est bien passé !
 
             } catch (Exception e) {
