@@ -1,5 +1,6 @@
 com/sprint/utils/GetterMethode.class
 com/sprint/utils/UrlKey.class
+com/sprint/utils/Modelmaison.class
 com/sprint/annotation/Controller.class
 com/sprint/annotation/Methode.class
 com/sprint/utils/Loader.class
