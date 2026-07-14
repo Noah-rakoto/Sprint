@@ -74,11 +74,8 @@ public class FrontController extends HttpServlet {
             // 5. Invocation du contrôleur
             Object result = targetMethod.invoke(controllerInstance, methodArgs);
 
-            // 6. Extraction des données du modèle vers la request standard
-            transferAttributesToRequest(model, request);
-
-            // 7. Traitement du résultat (redirection vers la vue)
-            handleMethodResult(result, request, response);
+            // 6. Traitement du résultat (redirection vers la vue)
+            handleMethodResult(result, model, request, response);
 
         } catch (Exception e) {
             sendInternalServerError(response, routeKey.getUrl(), e);
@@ -119,7 +116,9 @@ public class FrontController extends HttpServlet {
         if (model != null && model.getAttributes() != null) {
             Map<String, Object> attributes = model.getAttributes();
             for (Map.Entry<String, Object> entry : attributes.entrySet()) {
-                request.setAttribute(entry.getKey(), entry.getValue());
+                if (!"viewName".equals(entry.getKey())) {
+                    request.setAttribute(entry.getKey(), entry.getValue());
+                }
             }
         }
     }
@@ -136,14 +135,36 @@ public class FrontController extends HttpServlet {
         e.printStackTrace();
     }
 
-    private void handleMethodResult(Object result, HttpServletRequest request, HttpServletResponse response)
+    private void handleMethodResult(Object result, Modelmaison injectedModel, HttpServletRequest request,
+            HttpServletResponse response)
             throws IOException, ServletException {
         if (result instanceof String) {
+            transferAttributesToRequest(injectedModel, request);
             forwardToView((String) result, request, response);
             return;
         }
 
-        // Gestion si la méthode renvoie autre chose (ex: void ou JSON plus tard)
+        if (result instanceof Modelmaison) {
+            Modelmaison returnedModel = (Modelmaison) result;
+            transferAttributesToRequest(returnedModel, request);
+            Object viewName = returnedModel.getAttributes().get("viewName");
+
+            if (viewName instanceof String && !((String) viewName).isBlank()) {
+                forwardToView((String) viewName, request, response);
+                return;
+            }
+
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                    "Le Modelmaison retourné doit contenir un attribut 'viewName'.");
+            return;
+        }
+
+        if (result == null) {
+            transferAttributesToRequest(injectedModel, request);
+            return;
+        }
+
+        // Gestion si la méthode renvoie autre chose (ex: JSON plus tard)
         response.getWriter().println("Retour de la méthode: " + String.valueOf(result));
     }
 

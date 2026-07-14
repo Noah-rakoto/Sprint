@@ -31,7 +31,7 @@ public class MonControleur {
     // curl -X POST http://localhost:8080/Spint5/test
     // curl -X POST http://localhost:8080/Spint5/fonctionTest
     @Methode(value = "/fonctionTest", type = "GET")
-    public String fonctionTest(Modelmaison model) {
+    public Modelmaison fonctionTest(Modelmaison model) {
 
         List<String> data = new ArrayList<>();
         data.add("Donnée 1");
@@ -39,7 +39,24 @@ public class MonControleur {
         data.add("Donnée 3");
 
         model.addAttribute("data", data);
+        String viewName = "index"; // Nom de la vue à retourner
+        model.addAttribute("viewName", viewName); // Ajout du nom de la vue au modèle
 
-        return "index"; // Retourne uniquement le nom de la vue
+        return model;
+    }
+
+    @Methode(value = "/fonctionTest2", type = "POST")
+    public Modelmaison fonctionTest2(Modelmaison model) {
+
+        List<String> data = new ArrayList<>();
+        data.add("Donnée 1");
+        data.add("Donnée 2");
+        data.add("Donnée 3");
+        String viewName = "index2"; // Nom de la vue à retourner
+
+        model.addAttribute("donnees", data);
+        model.addAttribute("viewName", viewName); // Ajout du nom de la vue au modèle
+
+        return model;
     }
 }
