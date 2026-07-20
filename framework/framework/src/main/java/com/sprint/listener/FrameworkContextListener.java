@@ -8,6 +8,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletContext;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,7 +17,6 @@ public class FrameworkContextListener implements ServletContextListener {
 
     private final Map<UrlKey, Mapping> routes = new HashMap<>();
 
-    @Override
     public void contextInitialized(ServletContextEvent sce) {
         ServletContext context = sce.getServletContext();
         String scanPackage = context.getInitParameter("scan-package");
@@ -31,7 +31,6 @@ public class FrameworkContextListener implements ServletContextListener {
         }
     }
 
-    @Override
     public void contextDestroyed(ServletContextEvent sce) {
         routes.clear();
         sce.getServletContext().removeAttribute(ROUTES_ATTRIBUTE);

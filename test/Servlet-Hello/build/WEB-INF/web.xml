@@ -5,6 +5,23 @@
          https://jakarta.ee/xml/ns/jakartaee/web-app_5_0.xsd"
          version="5.0">
 
+    <!-- 1. Indiquer à Spring où se trouve sa configuration (Java ou XML) -->
+    <!-- Ici, on utilise une classe de configuration Java (AppConfig) -->
+    <context-param>
+        <param-name>contextClass</param-name>
+        <param-value>org.springframework.web.context.support.AnnotationConfigWebApplicationContext</param-value>
+    </context-param>
+    <context-param>
+        <param-name>contextConfigLocation</param-name>
+        <param-value>com.test.config.AppConfig-spring.xml</param-value> <!-- Remplace par le package de ta classe de config -->
+    </context-param>
+
+    <!-- 2. Le Listener de Spring qui charge le contexte au démarrage -->
+    <listener>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
+
+    <!-- Ton Servlet personnalisé existant -->
     <servlet>
         <servlet-name>SprintFramework</servlet-name>
         <servlet-class>com.sprint.FrontController</servlet-class>
@@ -18,6 +35,7 @@
         <servlet-name>SprintFramework</servlet-name>
         <url-pattern>/</url-pattern>
     </servlet-mapping>
+    
     <welcome-file-list>
         <welcome-file>index.html</welcome-file>
     </welcome-file-list>

@@ -30,6 +30,8 @@ public class MonControleur {
 
     // curl -X POST http://localhost:8080/Spint5/test
     // curl -X POST http://localhost:8080/Spint5/fonctionTest
+
+    // curl -X POST http://localhost:8080/Spint5_bis/fonctionTest2
     @Methode(value = "/fonctionTest", type = "GET")
     public Modelmaison fonctionTest(Modelmaison model) {
 
@@ -39,8 +41,7 @@ public class MonControleur {
         data.add("Donnée 3");
 
         model.addAttribute("data", data);
-        String viewName = "index"; // Nom de la vue à retourner
-        model.addAttribute("viewName", viewName); // Ajout du nom de la vue au modèle
+        model.setView("index"); // ✅ Définir la vue avec setView()
 
         return model;
     }
@@ -52,10 +53,9 @@ public class MonControleur {
         data.add("Donnée 1");
         data.add("Donnée 2");
         data.add("Donnée 3");
-        String viewName = "index2"; // Nom de la vue à retourner
 
         model.addAttribute("donnees", data);
-        model.addAttribute("viewName", viewName); // Ajout du nom de la vue au modèle
+        model.setView("index2"); // ✅ Définir la vue avec setView()
 
         return model;
     }

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!-- Active le support des annotations Spring (@Autowired, @Value, etc.) -->
+    <context:annotation-config />
+    <!-- 2. Configuration de la connexion Base de Données (DataSource) -->
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <!-- Le driver JDBC de ta base (ici postgresql) -->
+        <property name="driverClassName" value="org.postgresql.Driver" />
+        
+        <!-- L'URL de connexion (remplace "mabase" par le nom de ta base locale) -->
+        <property name="url" value="jdbc:postgresql://localhost:5432/sprint5?useSSL=false&amp;serverTimezone=UTC" />
+        
+        <!-- Tes identifiants d'accès -->
+        <property name="username" value="postgres" />
+        <property name="password" value="postgres" />
+    </bean>
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+        <property name="dataSource" ref="dataSource" />
+    </bean>
+
+    <!-- Dis à Spring de scanner automatiquement tes packages -->
+    <!-- Remplace "com.test" par le package racine qui contient tes services et repos -->
+    <context:component-scan base-package="com.test" />
+
+</beans>
