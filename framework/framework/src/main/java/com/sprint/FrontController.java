@@ -13,13 +13,13 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.web.context.*;
 
 public class FrontController extends HttpServlet {
     private Map<UrlKey, Mapping> listeMapping = new HashMap<>();
     private static final String DEFAULT_SCAN_PACKAGE = "com.test";
     private static final String VIEW_BASE_PATH = "/WEB-INF/views/";
 
-    @Override
     public void init() throws ServletException {
         super.init();
         String scanPackage = getInitParameter("scan-package");
@@ -33,13 +33,11 @@ public class FrontController extends HttpServlet {
         listeMapping = frameworkContextListener.getRoutes();
     }
 
-    @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws IOException, ServletException {
         processRequest(request, response);
     }
 
-    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws IOException, ServletException {
         processRequest(request, response);
@@ -60,21 +58,33 @@ public class FrontController extends HttpServlet {
         }
 
         try {
-            // 2. Résolution de la méthode du contrôleur
+            // 2. Résolution de la classe du contrôleur
             Class<?> clazz = Class.forName(match.getClassName());
             Method targetMethod = findMethodByName(clazz, match.getMethodName());
 
-            // 3. Instanciation du contrôleur et préparation du modèle
+            // 3. Changement majeur : Instanciation manuelle ET injection Spring après coup
+            // Étape 3.a : On crée l'objet nous-mêmes par réflexion
             Object controllerInstance = clazz.getDeclaredConstructor().newInstance();
-            Modelmaison model = new Modelmaison(); // On crée le sac à dos par défaut
 
-            // 4. Construction des arguments de la méthode
+            // Étape 3.b : On récupère le contexte Spring
+            ServletContext servletContext = getServletContext();
+            WebApplicationContext springContext = org.springframework.web.context.support.WebApplicationContextUtils
+                    .getRequiredWebApplicationContext(servletContext);
+
+            // Étape 3.c : LA LIGNE MAGIQUE qui va injecter ton UtilisateurService (avec son
+            // @Autowired)
+            springContext.getAutowireCapableBeanFactory().autowireBean(controllerInstance);
+
+            // 4. Préparation du modèle
+            Modelmaison model = new Modelmaison();
+
+            // 5. Construction des arguments de la méthode
             Object[] methodArgs = buildMethodArguments(targetMethod, model);
 
-            // 5. Invocation du contrôleur
+            // 6. Invocation du contrôleur
             Object result = targetMethod.invoke(controllerInstance, methodArgs);
 
-            // 6. Traitement du résultat (redirection vers la vue)
+            // 7. Traitement du résultat (redirection vers la vue)
             handleMethodResult(result, model, request, response);
 
         } catch (Exception e) {
@@ -114,23 +124,23 @@ public class FrontController extends HttpServlet {
 
     private void transferAttributesToRequest(Modelmaison model, HttpServletRequest request) {
         if (model != null && model.getAttributes() != null) {
-            Map<String, Object> attributes = model.getAttributes();
-            for (Map.Entry<String, Object> entry : attributes.entrySet()) {
-                if (!"viewName".equals(entry.getKey())) {
-                    request.setAttribute(entry.getKey(), entry.getValue());
-                }
+            // On transfère TOUT sans exception
+            for (Map.Entry<String, Object> entry : model.getAttributes().entrySet()) {
+                request.setAttribute(entry.getKey(), entry.getValue());
             }
         }
     }
 
     private void sendNotFoundError(HttpServletResponse response, UrlKey routeKey) throws IOException {
         response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        response.setContentType("text/html;charset=UTF-8");
         response.getWriter().println(
                 "Aucune route trouvée pour: [" + routeKey.getHttpMethod() + "] " + routeKey.getUrl());
     }
 
     private void sendInternalServerError(HttpServletResponse response, String route, Exception e) throws IOException {
         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        response.setContentType("text/html;charset=UTF-8");
         response.getWriter().println("Erreur lors de l'exécution de la route: " + route);
         e.printStackTrace();
     }
@@ -138,33 +148,44 @@ public class FrontController extends HttpServlet {
     private void handleMethodResult(Object result, Modelmaison injectedModel, HttpServletRequest request,
             HttpServletResponse response)
             throws IOException, ServletException {
+
+        // Si la méthode renvoie un String (ex: return "users";)
         if (result instanceof String) {
             transferAttributesToRequest(injectedModel, request);
             forwardToView((String) result, request, response);
             return;
         }
 
+        // Si la méthode renvoie le Modelmaison (comme ton getAll)
         if (result instanceof Modelmaison) {
             Modelmaison returnedModel = (Modelmaison) result;
             transferAttributesToRequest(returnedModel, request);
-            Object viewName = returnedModel.getAttributes().get("viewName");
 
-            if (viewName instanceof String && !((String) viewName).isBlank()) {
-                forwardToView((String) viewName, request, response);
+            // LA MODIFICATION : On utilise le getter propre !
+            String viewName = returnedModel.getView();
+
+            if (viewName != null && !viewName.isBlank()) {
+                forwardToView(viewName, request, response);
                 return;
             }
 
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    "Le Modelmaison retourné doit contenir un attribut 'viewName'.");
+                    "Le Modelmaison retourné doit avoir une vue définie via setView().");
             return;
         }
 
+        // Si la méthode renvoie null ou void
         if (result == null) {
             transferAttributesToRequest(injectedModel, request);
+
+            // On regarde si la méthode a modifié le modèle injecté en paramètre
+            String viewName = injectedModel.getView();
+            if (viewName != null && !viewName.isBlank()) {
+                forwardToView(viewName, request, response);
+            }
             return;
         }
 
-        // Gestion si la méthode renvoie autre chose (ex: JSON plus tard)
         response.getWriter().println("Retour de la méthode: " + String.valueOf(result));
     }
 

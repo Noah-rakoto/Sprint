@@ -20,7 +20,6 @@ public class UrlKey {
         return httpMethod;
     }
 
-    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -31,7 +30,6 @@ public class UrlKey {
         return Objects.equals(url, other.url) && Objects.equals(httpMethod, other.httpMethod);
     }
 
-    @Override
     public int hashCode() {
         return Objects.hash(url, httpMethod);
     }
