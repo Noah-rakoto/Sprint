@@ -8,3 +8,4 @@ com/sprint/utils/Mapping.class
 com/sprint/utils/RouteScanner.class
 com/sprint/FrontController.class
 com/sprint/listener/FrameworkContextListener.class
+com/sprint/annotation/ApiRest.class
