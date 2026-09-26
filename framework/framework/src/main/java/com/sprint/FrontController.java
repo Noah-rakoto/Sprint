@@ -1,5 +1,9 @@
 package com.sprint;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.sprint.annotation.ApiRest;
 import com.sprint.listener.FrameworkContextListener;
 import com.sprint.utils.Mapping;
 import com.sprint.utils.Modelmaison;
@@ -19,6 +23,9 @@ public class FrontController extends HttpServlet {
     private Map<UrlKey, Mapping> listeMapping = new HashMap<>();
     private static final String DEFAULT_SCAN_PACKAGE = "com.test";
     private static final String VIEW_BASE_PATH = "/WEB-INF/views/";
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     public void init() throws ServletException {
         super.init();
@@ -85,7 +92,7 @@ public class FrontController extends HttpServlet {
             Object result = targetMethod.invoke(controllerInstance, methodArgs);
 
             // 7. Traitement du résultat (redirection vers la vue)
-            handleMethodResult(result, model, request, response);
+            handleMethodResult(result, model, clazz, request, response);
 
         } catch (Exception e) {
             sendInternalServerError(response, routeKey.getUrl(), e);
@@ -145,9 +152,28 @@ public class FrontController extends HttpServlet {
         e.printStackTrace();
     }
 
-    private void handleMethodResult(Object result, Modelmaison injectedModel, HttpServletRequest request,
-            HttpServletResponse response)
+    private void handleMethodResult(Object result, Modelmaison injectedModel, Class<?> controllerClass,
+            HttpServletRequest request, HttpServletResponse response)
             throws IOException, ServletException {
+
+        // -- Cas @ApiRest : toujours du JSON, peu importe le type de retour --
+        if (controllerClass.isAnnotationPresent(ApiRest.class)) {
+            Object payload;
+            if (result instanceof Modelmaison) {
+                // On expose les attributs du modèle comme objet JSON
+                payload = ((Modelmaison) result).getAttributes();
+            } else {
+                // String, Integer, liste, objet métier… tout passe par Jackson
+                payload = result;
+            }
+            String json = objectMapper.writeValueAsString(payload);
+            response.setContentType("application/json;charset=UTF-8");
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.getWriter().write(json);
+            return;
+        }
+
+        // -- Comportement MVC classique (non-@ApiRest) --
 
         // Si la méthode renvoie un String (ex: return "users";)
         if (result instanceof String) {

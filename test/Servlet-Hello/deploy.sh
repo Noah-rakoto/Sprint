@@ -1,6 +1,6 @@
 #!/bin/bash
 
-APP_NAME="Spint5_bis"
+APP_NAME="Sprint_6Test"
 TARGET_DIR="target"
 
 # Chemin du framework

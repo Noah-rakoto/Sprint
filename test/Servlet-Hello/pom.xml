@@ -16,7 +16,7 @@
     <maven.compiler.target>17</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <spring.version>6.1.10</spring.version>
-    <app.name>Spint5</app.name>
+    <app.name>Sprint6_test</app.name>
   </properties>
 
   <dependencies>
@@ -55,6 +55,19 @@
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <version>42.7.3</version>
+    </dependency>
+
+    <!-- Jackson : requis par sprint-framework.jar pour la sérialisation @ApiRest -->
+    <!-- (scope=system ne résout pas les dépendances transitives, on doit les déclarer ici) -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.17.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.datatype</groupId>
+      <artifactId>jackson-datatype-jsr310</artifactId>
+      <version>2.17.1</version>
     </dependency>
   </dependencies>
 
