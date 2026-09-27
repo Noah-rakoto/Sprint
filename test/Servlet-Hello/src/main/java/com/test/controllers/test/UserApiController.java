@@ -33,4 +33,17 @@ public class UserApiController {
         model.addAttribute("message", "Hello from the model!");
         return model;
     }
+
+    @Methode(value = "/usersAPI/test", type = "GET")
+    public Modelmaison testModelSansJson(Modelmaison model) {
+        List<Utilisateur> users = utilisateurService.recupererTousLesUtilisateurs();
+
+        // 1. On stocke les données pour la JSP
+        model.addAttribute("users", users);
+
+        // 2. On définit explicitement la vue de destination !
+        model.setView("usersAPI");
+
+        return model;
+    }
 }

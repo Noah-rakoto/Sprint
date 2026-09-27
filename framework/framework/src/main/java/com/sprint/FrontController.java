@@ -155,17 +155,23 @@ public class FrontController extends HttpServlet {
     private void handleMethodResult(Object result, Modelmaison injectedModel, Class<?> controllerClass,
             HttpServletRequest request, HttpServletResponse response)
             throws IOException, ServletException {
+        boolean isApiRest = controllerClass.isAnnotationPresent(ApiRest.class);
 
-        // -- Cas @ApiRest : toujours du JSON, peu importe le type de retour --
-        if (controllerClass.isAnnotationPresent(ApiRest.class)) {
-            Object payload;
-            if (result instanceof Modelmaison) {
-                // On expose les attributs du modèle comme objet JSON
-                payload = ((Modelmaison) result).getAttributes();
-            } else {
-                // String, Integer, liste, objet métier… tout passe par Jackson
-                payload = result;
+        // Cas particulier : même dans un contrôleur @ApiRest, si une vue a été
+        // explicitement définie sur le Modelmaison, on privilégie le rendu JSP.
+        if (isApiRest && result instanceof Modelmaison) {
+            Modelmaison m = (Modelmaison) result;
+            if (m.getView() != null && !m.getView().isBlank()) {
+                transferAttributesToRequest(m, request);
+                forwardToView(m.getView(), request, response);
+                return;
             }
+        }
+
+        if (isApiRest) {
+            Object payload = (result instanceof Modelmaison)
+                    ? ((Modelmaison) result).getAttributes()
+                    : result;
             String json = objectMapper.writeValueAsString(payload);
             response.setContentType("application/json;charset=UTF-8");
             response.setStatus(HttpServletResponse.SC_OK);
