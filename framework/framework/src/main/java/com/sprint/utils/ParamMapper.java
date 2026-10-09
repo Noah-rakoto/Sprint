@@ -1,7 +1,9 @@
 package com.sprint.utils;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 
 /**
@@ -23,10 +25,51 @@ public class ParamMapper {
                 continue;
             }
 
-            String value = request.getParameter(params[i].getName());
-            args[i] = convert(value, type);
+            if (isSimpleType(type)) {
+                args[i] = convert(request.getParameter(params[i].getName()), type);
+            } else {
+                args[i] = buildBean(type, request);
+            }
         }
         return args;
+    }
+
+    private static boolean isSimpleType(Class<?> type) {
+        return type.isPrimitive() || type == String.class
+                || Number.class.isAssignableFrom(type)
+                || type == Boolean.class || type == Character.class;
+    }
+
+    /**
+     * Instancie un bean et remplit ses champs avec les paramètres de requête
+     * de même nom (via le setter s'il existe, sinon directement sur le champ).
+     */
+    private static Object buildBean(Class<?> type, HttpServletRequest request) {
+        try {
+            Object bean = type.getDeclaredConstructor().newInstance();
+            for (Field field : type.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers()) || !isSimpleType(field.getType())) {
+                    continue;
+                }
+                String raw = request.getParameter(field.getName());
+                if (raw == null) {
+                    continue;
+                }
+                Object value = convert(raw, field.getType());
+                String setterName = "set" + Character.toUpperCase(field.getName().charAt(0))
+                        + field.getName().substring(1);
+                try {
+                    type.getMethod(setterName, field.getType()).invoke(bean, value);
+                } catch (NoSuchMethodException e) {
+                    field.setAccessible(true);
+                    field.set(bean, value);
+                }
+            }
+            return bean;
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalArgumentException(
+                    "Impossible de construire " + type.getName() + " depuis la requête", e);
+        }
     }
 
     /** Convertit une chaîne vers le type attendu ; valeur par défaut si absente. */

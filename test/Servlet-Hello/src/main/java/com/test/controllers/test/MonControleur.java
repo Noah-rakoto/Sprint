@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.sprint.annotation.Controller;
+import com.test.model.Employe;
 import com.sprint.annotation.Methode;
 import com.sprint.utils.Modelmaison;
 
@@ -64,6 +65,14 @@ public class MonControleur {
     @Methode(value = "/hello", type = "GET")
     public Modelmaison hello(String nom, int age, Modelmaison model) {
         model.addAttribute("message", "Bonjour " + nom + ", tu as " + age + " ans");
+        model.setView("hello");
+        return model;
+    }
+
+    // Sprint 7 bis : /addEmploye?nom=Bob&mail=bob@test.com&numero=42
+    @Methode(value = "/addEmploye", type = "GET")
+    public Modelmaison addEmploye(Employe emp, Modelmaison model) {
+        model.addAttribute("message", "Employe ajoute : " + emp.getNom() + " <" + emp.getMail() + "> #" + emp.getNumero());
         model.setView("hello");
         return model;
     }
