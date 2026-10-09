@@ -7,6 +7,7 @@ import com.sprint.annotation.ApiRest;
 import com.sprint.listener.FrameworkContextListener;
 import com.sprint.utils.Mapping;
 import com.sprint.utils.Modelmaison;
+import com.sprint.utils.ParamMapper;
 import com.sprint.utils.UrlKey;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServlet;
@@ -86,7 +87,7 @@ public class FrontController extends HttpServlet {
             Modelmaison model = new Modelmaison();
 
             // 5. Construction des arguments de la méthode
-            Object[] methodArgs = buildMethodArguments(targetMethod, model);
+            Object[] methodArgs = ParamMapper.mapParameters(targetMethod, request, model);
 
             // 6. Invocation du contrôleur
             Object result = targetMethod.invoke(controllerInstance, methodArgs);
@@ -114,19 +115,6 @@ public class FrontController extends HttpServlet {
             }
         }
         throw new NoSuchMethodException("Méthode " + methodName + " introuvable dans " + clazz.getName());
-    }
-
-    private Object[] buildMethodArguments(Method method, Modelmaison model) {
-        int paramCount = method.getParameterCount();
-        Object[] methodArgs = new Object[paramCount];
-        Class<?>[] parameterTypes = method.getParameterTypes();
-
-        for (int i = 0; i < paramCount; i++) {
-            if (parameterTypes[i].equals(Modelmaison.class)) {
-                methodArgs[i] = model; // On injecte notre modèle s'il est attendu
-            }
-        }
-        return methodArgs;
     }
 
     private void transferAttributesToRequest(Modelmaison model, HttpServletRequest request) {

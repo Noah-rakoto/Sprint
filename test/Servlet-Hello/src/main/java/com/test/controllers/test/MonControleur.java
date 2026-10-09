@@ -59,4 +59,12 @@ public class MonControleur {
 
         return model;
     }
+
+    // Sprint 7 : /hello?nom=Alice&age=25
+    @Methode(value = "/hello", type = "GET")
+    public Modelmaison hello(String nom, int age, Modelmaison model) {
+        model.addAttribute("message", "Bonjour " + nom + ", tu as " + age + " ans");
+        model.setView("hello");
+        return model;
+    }
 }
