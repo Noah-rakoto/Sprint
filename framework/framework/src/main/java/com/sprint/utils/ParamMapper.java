@@ -13,6 +13,9 @@ import java.lang.reflect.Parameter;
  */
 public class ParamMapper {
 
+    /**
+     * Mappe les paramètres de la requête HTTP vers les arguments d'une méthode de contrôleur.
+     */
     public static Object[] mapParameters(Method method, HttpServletRequest request, Modelmaison model) {
         Parameter[] params = method.getParameters();
         Object[] args = new Object[params.length];
