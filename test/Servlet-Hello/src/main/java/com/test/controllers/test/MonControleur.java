@@ -1,5 +1,8 @@
 package com.test.controllers.test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,6 +11,7 @@ import com.test.model.Employe;
 import com.test.model.EmployeTest;
 import com.test.model.Utilisateur;
 import com.sprint.annotation.Methode;
+import com.sprint.utils.MapFile;
 import com.sprint.utils.Modelmaison;
 
 @Controller
@@ -123,4 +127,46 @@ public class MonControleur {
         return model;
     }
 
+
+    // Sprint 7 File : formulaire multipart
+    @Methode(value = "/formFile", type = "GET")
+    public Modelmaison formFile(Modelmaison model) {
+        model.setView("formFile");
+        return model;
+    }
+
+    // Sprint 7 File : le fichier est un argument direct de la méthode
+    @Methode(value = "/upload", type = "POST")
+    public Modelmaison upload(MapFile fichier, Modelmaison model) throws IOException {
+        if (fichier == null) {
+            model.addAttribute("message", "Aucun fichier recu");
+        } else {
+            Path saved = save(fichier);
+            model.addAttribute("message", "Fichier recu : " + fichier.getFileName() + " ("
+                    + fichier.getBytes().length + " octets) -> " + saved);
+        }
+        model.setView("hello");
+        return model;
+    }
+
+    // Sprint 7 File : le fichier est un champ de l'objet Employe
+    @Methode(value = "/addEmpPhoto", type = "POST")
+    public Modelmaison addEmpPhoto(Employe emp, Modelmaison model) throws IOException {
+        String photoInfo = "pas de photo";
+        if (emp.getPhoto() != null) {
+            photoInfo = emp.getPhoto().getFileName() + " (" + emp.getPhoto().getBytes().length + " octets) -> "
+                    + save(emp.getPhoto());
+        }
+        model.addAttribute("message", "Employe ajoute : " + emp.getNom() + " <" + emp.getMail() + "> #"
+                + emp.getNumero() + " | photo : " + photoInfo);
+        model.setView("hello");
+        return model;
+    }
+
+    // Exemple de sauvegarde cote developpeur : ecriture sur disque dans <tmp>/uploads
+    private Path save(MapFile file) throws IOException {
+        Path dir = Path.of(System.getProperty("java.io.tmpdir"), "uploads");
+        Files.createDirectories(dir);
+        return Files.write(dir.resolve(file.getFileName()), file.getBytes());
+    }
 }
