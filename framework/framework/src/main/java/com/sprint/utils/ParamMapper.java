@@ -33,7 +33,9 @@ public class ParamMapper {
                 continue;
             }
 
-            if (type.equals(MapFile.class)) {
+            if (type.equals(MySession.class)) {
+                args[i] = MySession.fromHttpSession(request.getSession(true));
+            } else if (type.equals(MapFile.class)) {
                 args[i] = readFile(request, params[i].getName());
             } else if (type.equals(MapFile[].class)) {
                 args[i] = readFiles(request, params[i].getName());
