@@ -1,6 +1,8 @@
 package com.sprint.utils;
 
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -13,6 +15,9 @@ import java.lang.reflect.Parameter;
  */
 public class ParamMapper {
 
+    /**
+     * Mappe les paramètres de la requête HTTP vers les arguments d'une méthode de contrôleur.
+     */
     public static Object[] mapParameters(Method method, HttpServletRequest request, Modelmaison model) {
         Parameter[] params = method.getParameters();
         Object[] args = new Object[params.length];
@@ -25,7 +30,9 @@ public class ParamMapper {
                 continue;
             }
 
-            if (isSimpleType(type)) {
+            if (type.equals(MapFile.class)) {
+                args[i] = readFile(request, params[i].getName());
+            } else if (isSimpleType(type)) {
                 args[i] = convert(request.getParameter(params[i].getName()), type);
             } else {
                 args[i] = buildBean(type, request);
@@ -48,14 +55,24 @@ public class ParamMapper {
         try {
             Object bean = type.getDeclaredConstructor().newInstance();
             for (Field field : type.getDeclaredFields()) {
-                if (Modifier.isStatic(field.getModifiers()) || !isSimpleType(field.getType())) {
+                if (Modifier.isStatic(field.getModifiers())) {
                     continue;
                 }
-                String raw = request.getParameter(field.getName());
-                if (raw == null) {
+                Object value;
+                if (field.getType().equals(MapFile.class)) {
+                    value = readFile(request, field.getName());
+                    if (value == null) {
+                        continue;
+                    }
+                } else if (isSimpleType(field.getType())) {
+                    String raw = request.getParameter(field.getName());
+                    if (raw == null) {
+                        continue;
+                    }
+                    value = convert(raw, field.getType());
+                } else {
                     continue;
                 }
-                Object value = convert(raw, field.getType());
                 String setterName = "set" + Character.toUpperCase(field.getName().charAt(0))
                         + field.getName().substring(1);
                 try {
@@ -69,6 +86,22 @@ public class ParamMapper {
         } catch (ReflectiveOperationException e) {
             throw new IllegalArgumentException(
                     "Impossible de construire " + type.getName() + " depuis la requête", e);
+        }
+    }
+
+    /**
+     * Lit le fichier envoyé sous le nom donné ; null si la requête n'est pas
+     * multipart ou si aucun fichier n'a été envoyé.
+     */
+    private static MapFile readFile(HttpServletRequest request, String name) {
+        String contentType = request.getContentType();
+        if (contentType == null || !contentType.toLowerCase().startsWith("multipart/")) {
+            return null;
+        }
+        try {
+            return MapFile.fromPart(request.getPart(name));
+        } catch (IOException | ServletException e) {
+            throw new IllegalArgumentException("Impossible de lire le fichier '" + name + "'", e);
         }
     }
 

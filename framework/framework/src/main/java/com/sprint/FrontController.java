@@ -10,6 +10,7 @@ import com.sprint.utils.Modelmaison;
 import com.sprint.utils.ParamMapper;
 import com.sprint.utils.UrlKey;
 import jakarta.servlet.ServletContext;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,6 +21,8 @@ import java.util.HashMap;
 import java.util.Map;
 import org.springframework.web.context.*;
 
+// Active request.getPart() pour les formulaires enctype="multipart/form-data" (Sprint 7 File)
+@MultipartConfig
 public class FrontController extends HttpServlet {
     private Map<UrlKey, Mapping> listeMapping = new HashMap<>();
     private static final String DEFAULT_SCAN_PACKAGE = "com.test";

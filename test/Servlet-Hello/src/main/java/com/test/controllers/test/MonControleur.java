@@ -1,11 +1,17 @@
 package com.test.controllers.test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.sprint.annotation.Controller;
 import com.test.model.Employe;
+import com.test.model.EmployeTest;
+import com.test.model.Utilisateur;
 import com.sprint.annotation.Methode;
+import com.sprint.utils.MapFile;
 import com.sprint.utils.Modelmaison;
 
 @Controller
@@ -75,5 +81,92 @@ public class MonControleur {
         model.addAttribute("message", "Employe ajoute : " + emp.getNom() + " <" + emp.getMail() + "> #" + emp.getNumero());
         model.setView("hello");
         return model;
+    }
+
+    // Sprint 7 bis : /addEmp?nom=Alya&mail=Alya@gmail.com&numero=42
+    @Methode(value = "/addEmp", type = "GET")
+    public Modelmaison addEmp(EmployeTest emp, Modelmaison model) {
+        // Le framework laisse wife a null : on la cree a la main pour tester emp.getWife().getNom()
+        if (emp.getWife() == null) {
+            Employe wife = new Employe();
+            wife.setNom("Marie");
+            wife.setMail("wife@gmail.com");
+            wife.setNumero(123);
+            emp.setWife(wife);
+        }
+        // String wifeInfo = emp.getWife().getNom() + " <" + emp.getWife().getMail() + "> #" + emp.getWife().getNumero();
+        String wifeInfo2 = emp.getWife().getNom() + emp.getWife().getMail() + emp.getWife().getNumero();
+        model.addAttribute("message", "Employe ajoute : " + emp.getNom() + " <" + emp.getMail() + "> #" + emp.getNumero()
+                + " | epouse : " + wifeInfo2);
+        model.setView("hello");
+        return model;
+    }
+
+    @Methode(value = "/form" , type = "GET")
+    public Modelmaison form(Modelmaison model){
+        model.setView("form");
+        return model;
+    }
+    // Sprint 7 bis : /addEmpUser?nom=Alya&mail=Alya@gmail.com&numero=42
+    @Methode(value = "/addEmpUser", type = "GET")
+    public Modelmaison addEmpUser(Employe emp, Modelmaison model) {
+        // Le framework laisse wife a null : on la cree a la main pour tester emp.getWife().getNom()
+        if (emp.getUser() == null) {
+            Utilisateur user = new Utilisateur(); 
+            user.setNom("Marie");
+            user.setEmail("user@gmail.com");
+            user.setRole("amdin");
+            user.setDateInscription(null);
+            emp.setUser(user);
+        }
+        // String wifeInfo = emp.getWife().getNom() + " <" + emp.getWife().getMail() + "> #" + emp.getWife().getNumero();
+        String userInfo = emp.getUser().getNom() + emp.getUser().getEmail() + emp.getUser().getRole();
+        model.addAttribute("message", "Employe ajoute : " + emp.getNom() + " <" + emp.getMail() + "> #" + emp.getNumero()
+                + " | user : " + userInfo);
+        model.setView("testUser");
+        return model;
+    }
+
+
+    // Sprint 7 File : formulaire multipart
+    @Methode(value = "/formFile", type = "GET")
+    public Modelmaison formFile(Modelmaison model) {
+        model.setView("formFile");
+        return model;
+    }
+
+    // Sprint 7 File : le fichier est un argument direct de la méthode
+    @Methode(value = "/upload", type = "POST")
+    public Modelmaison upload(MapFile fichier, Modelmaison model) throws IOException {
+        if (fichier == null) {
+            model.addAttribute("message", "Aucun fichier recu");
+        } else {
+            Path saved = save(fichier);
+            model.addAttribute("message", "Fichier recu : " + fichier.getFileName() + " ("
+                    + fichier.getBytes().length + " octets) -> " + saved);
+        }
+        model.setView("hello");
+        return model;
+    }
+
+    // Sprint 7 File : le fichier est un champ de l'objet Employe
+    @Methode(value = "/addEmpPhoto", type = "POST")
+    public Modelmaison addEmpPhoto(Employe emp, Modelmaison model) throws IOException {
+        String photoInfo = "pas de photo";
+        if (emp.getPhoto() != null) {
+            photoInfo = emp.getPhoto().getFileName() + " (" + emp.getPhoto().getBytes().length + " octets) -> "
+                    + save(emp.getPhoto());
+        }
+        model.addAttribute("message", "Employe ajoute : " + emp.getNom() + " <" + emp.getMail() + "> #"
+                + emp.getNumero() + " | photo : " + photoInfo);
+        model.setView("hello");
+        return model;
+    }
+
+    // Exemple de sauvegarde cote developpeur : ecriture sur disque dans <tmp>/uploads
+    private Path save(MapFile file) throws IOException {
+        Path dir = Path.of(System.getProperty("java.io.tmpdir"), "uploads");
+        Files.createDirectories(dir);
+        return Files.write(dir.resolve(file.getFileName()), file.getBytes());
     }
 }
