@@ -7,6 +7,12 @@
         <button type="submit">Envoyer</button>
     </form>
 
+    <h2>Plusieurs fichiers</h2>
+    <form action="${pageContext.request.contextPath}/uploadMulti" method="post" enctype="multipart/form-data">
+        <input type="file" name="fichiers" multiple>
+        <button type="submit">Envoyer</button>
+    </form>
+
     <h2>Employe avec photo</h2>
     <form action="${pageContext.request.contextPath}/addEmpPhoto" method="post" enctype="multipart/form-data">
         <input type="text" name="nom" placeholder="nom">

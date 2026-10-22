@@ -5,11 +5,12 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Fichier envoyé par un formulaire multipart : nom, extension et contenu brut.
+ * Fichier envoyé par un formulaire multipart : nom, extension, type MIME et contenu brut.
  */
 public class MapFile {
     private String name;
     private String extension;
+    private String contentType;
     private byte[] bytes;
 
     public MapFile() {}
@@ -23,6 +24,9 @@ public class MapFile {
     public String getName() {
         return name;
     }
+    public String getContentType() {
+        return contentType;
+    }
     public void setBytes(byte[] bytes) {
         this.bytes = bytes;
     }
@@ -31,6 +35,9 @@ public class MapFile {
     }
     public void setName(String name) {
         this.name = name;
+    }
+    public void setContentType(String contentType) {
+        this.contentType = contentType;
     }
 
     /** Nom complet du fichier, ex : "photo.png". */
@@ -57,6 +64,7 @@ public class MapFile {
         MapFile mf = new MapFile();
         mf.setName(dot > 0 ? fileName.substring(0, dot) : fileName);
         mf.setExtension(dot > 0 ? fileName.substring(dot + 1) : "");
+        mf.setContentType(part.getContentType());
         try (InputStream is = part.getInputStream()) {
             mf.setBytes(is.readAllBytes());
         }
