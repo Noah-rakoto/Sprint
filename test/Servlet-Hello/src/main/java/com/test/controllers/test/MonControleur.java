@@ -143,8 +143,21 @@ public class MonControleur {
         } else {
             Path saved = save(fichier);
             model.addAttribute("message", "Fichier recu : " + fichier.getFileName() + " ("
-                    + fichier.getBytes().length + " octets) -> " + saved);
+                    + fichier.getContentType() + ", " + fichier.getBytes().length + " octets) -> " + saved);
         }
+        model.setView("hello");
+        return model;
+    }
+
+    // Sprint 8 : plusieurs fichiers sous le meme nom (<input type="file" multiple>)
+    @Methode(value = "/uploadMulti", type = "POST")
+    public Modelmaison uploadMulti(MapFile[] fichiers, Modelmaison model) throws IOException {
+        StringBuilder message = new StringBuilder(fichiers.length + " fichier(s) recu(s) :");
+        for (MapFile f : fichiers) {
+            save(f);
+            message.append(" ").append(f.getFileName()).append(" (").append(f.getContentType()).append(")");
+        }
+        model.addAttribute("message", message.toString());
         model.setView("hello");
         return model;
     }

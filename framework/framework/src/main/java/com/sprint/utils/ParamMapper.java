@@ -2,11 +2,14 @@ package com.sprint.utils;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.Part;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Construit le tableau d'arguments d'une méthode de contrôleur à partir des
@@ -32,6 +35,8 @@ public class ParamMapper {
 
             if (type.equals(MapFile.class)) {
                 args[i] = readFile(request, params[i].getName());
+            } else if (type.equals(MapFile[].class)) {
+                args[i] = readFiles(request, params[i].getName());
             } else if (isSimpleType(type)) {
                 args[i] = convert(request.getParameter(params[i].getName()), type);
             } else {
@@ -64,6 +69,12 @@ public class ParamMapper {
                     if (value == null) {
                         continue;
                     }
+                } else if (field.getType().equals(MapFile[].class)) {
+                    MapFile[] files = readFiles(request, field.getName());
+                    if (files.length == 0) {
+                        continue;
+                    }
+                    value = files;
                 } else if (isSimpleType(field.getType())) {
                     String raw = request.getParameter(field.getName());
                     if (raw == null) {
@@ -94,8 +105,7 @@ public class ParamMapper {
      * multipart ou si aucun fichier n'a été envoyé.
      */
     private static MapFile readFile(HttpServletRequest request, String name) {
-        String contentType = request.getContentType();
-        if (contentType == null || !contentType.toLowerCase().startsWith("multipart/")) {
+        if (!isMultipart(request)) {
             return null;
         }
         try {
@@ -103,6 +113,35 @@ public class ParamMapper {
         } catch (IOException | ServletException e) {
             throw new IllegalArgumentException("Impossible de lire le fichier '" + name + "'", e);
         }
+    }
+
+    /**
+     * Lit tous les fichiers envoyés sous le même nom (<input type="file" multiple>) ;
+     * tableau vide si la requête n'est pas multipart ou si aucun fichier n'a été envoyé.
+     */
+    private static MapFile[] readFiles(HttpServletRequest request, String name) {
+        if (!isMultipart(request)) {
+            return new MapFile[0];
+        }
+        try {
+            List<MapFile> files = new ArrayList<>();
+            for (Part part : request.getParts()) {
+                if (part.getName().equals(name)) {
+                    MapFile mf = MapFile.fromPart(part);
+                    if (mf != null) {
+                        files.add(mf);
+                    }
+                }
+            }
+            return files.toArray(new MapFile[0]);
+        } catch (IOException | ServletException e) {
+            throw new IllegalArgumentException("Impossible de lire les fichiers '" + name + "'", e);
+        }
+    }
+
+    private static boolean isMultipart(HttpServletRequest request) {
+        String contentType = request.getContentType();
+        return contentType != null && contentType.toLowerCase().startsWith("multipart/");
     }
 
     /** Convertit une chaîne vers le type attendu ; valeur par défaut si absente. */
