@@ -1,0 +1,6 @@
+# Classes compilées
+*.class
+
+# Sorties Maven (on garde sprint-framework.jar, utilisé par le projet test)
+framework/framework/target/*
+!framework/framework/target/sprint-framework.jar
