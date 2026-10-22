@@ -7,6 +7,7 @@ import com.sprint.annotation.ApiRest;
 import com.sprint.listener.FrameworkContextListener;
 import com.sprint.utils.Mapping;
 import com.sprint.utils.Modelmaison;
+import com.sprint.utils.MySession;
 import com.sprint.utils.ParamMapper;
 import com.sprint.utils.UrlKey;
 import jakarta.servlet.ServletContext;
@@ -94,6 +95,13 @@ public class FrontController extends HttpServlet {
 
             // 6. Invocation du contrôleur
             Object result = targetMethod.invoke(controllerInstance, methodArgs);
+
+            // 6.b. Report des changements de MySession dans la vraie HttpSession (Sprint 9)
+            for (Object arg : methodArgs) {
+                if (arg instanceof MySession) {
+                    ((MySession) arg).applyTo(request.getSession(true));
+                }
+            }
 
             // 7. Traitement du résultat (redirection vers la vue)
             handleMethodResult(result, model, clazz, request, response);
