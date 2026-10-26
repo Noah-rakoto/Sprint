@@ -13,6 +13,12 @@
     <param-value>classpath:com/test/config/AppConfig-spring.xml</param-value>
     </context-param>
 
+    <!-- Sprint 10 : attribut de session qui identifie l'utilisateur connecté (@Auth) -->
+    <context-param>
+        <param-name>auth.user-session-key</param-name>
+        <param-value>user</param-value>
+    </context-param>
+
     <!-- 2. Le Listener de Spring qui charge le contexte au démarrage -->
     <listener>
         <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
