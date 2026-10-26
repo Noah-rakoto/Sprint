@@ -31,6 +31,7 @@ public class FrontController extends HttpServlet {
     private Map<UrlKey, Mapping> listeMapping = new HashMap<>();
     private static final String DEFAULT_SCAN_PACKAGE = "com.test";
     private static final String VIEW_BASE_PATH = "/WEB-INF/views/";
+    private WebApplicationContext springContext;
     private String userSessionKey;
     private String roleSessionKey;
     private final ObjectMapper objectMapper = new ObjectMapper()
@@ -48,6 +49,10 @@ public class FrontController extends HttpServlet {
         FrameworkContextListener frameworkContextListener = new FrameworkContextListener();
         frameworkContextListener.initialize(context, scanPackage);
         listeMapping = frameworkContextListener.getRoutes();
+
+        // Contexte Spring (créé par ContextLoaderListener) : récupéré une seule fois
+        springContext = org.springframework.web.context.support.WebApplicationContextUtils
+                .getRequiredWebApplicationContext(context);
 
         // Sprint 10 : nom de l'attribut de session qui identifie l'utilisateur connecté
         userSessionKey = context.getInitParameter("auth.user-session-key");
@@ -87,9 +92,9 @@ public class FrontController extends HttpServlet {
         }
 
         try {
-            // 2. Résolution de la classe du contrôleur
-            Class<?> clazz = Class.forName(match.getClassName());
-            Method targetMethod = findMethodByName(clazz, match.getMethodName());
+            // 2. Classe et méthode déjà résolues au scan des routes
+            Class<?> clazz = match.getControllerClass();
+            Method targetMethod = match.getMethod();
 
             // 2.b. Contrôle d'accès @Auth (Sprint 10 / 10 bis) : avant toute instanciation
             Auth auth = targetMethod.getAnnotation(Auth.class);
@@ -110,12 +115,7 @@ public class FrontController extends HttpServlet {
             // Étape 3.a : On crée l'objet nous-mêmes par réflexion
             Object controllerInstance = clazz.getDeclaredConstructor().newInstance();
 
-            // Étape 3.b : On récupère le contexte Spring
-            ServletContext servletContext = getServletContext();
-            WebApplicationContext springContext = org.springframework.web.context.support.WebApplicationContextUtils
-                    .getRequiredWebApplicationContext(servletContext);
-
-            // Étape 3.c : LA LIGNE MAGIQUE qui va injecter ton UtilisateurService (avec son
+            // Étape 3.b : LA LIGNE MAGIQUE qui va injecter ton UtilisateurService (avec son
             // @Autowired)
             springContext.getAutowireCapableBeanFactory().autowireBean(controllerInstance);
 
@@ -123,7 +123,7 @@ public class FrontController extends HttpServlet {
             Modelmaison model = new Modelmaison();
 
             // 5. Construction des arguments de la méthode
-            Object[] methodArgs = ParamMapper.mapParameters(targetMethod, request, model);
+            Object[] methodArgs = ParamMapper.mapParameters(targetMethod, request, response, model);
 
             // 6. Invocation du contrôleur
             Object result = targetMethod.invoke(controllerInstance, methodArgs);
@@ -164,15 +164,6 @@ public class FrontController extends HttpServlet {
         }
         Object role = request.getSession(false).getAttribute(roleSessionKey);
         return role != null && Arrays.asList(roles).contains(role.toString());
-    }
-
-    private Method findMethodByName(Class<?> clazz, String methodName) throws NoSuchMethodException {
-        for (Method m : clazz.getDeclaredMethods()) {
-            if (m.getName().equals(methodName)) {
-                return m;
-            }
-        }
-        throw new NoSuchMethodException("Méthode " + methodName + " introuvable dans " + clazz.getName());
     }
 
     private void transferAttributesToRequest(Modelmaison model, HttpServletRequest request) {

@@ -31,7 +31,7 @@ public class RouteScanner {
                     UrlKey routeKey = new UrlKey(url, httpMethod);
                     String signature = clazz.getName() + "." + method.getName() + "()";
                     Mapping previous = mappings.putIfAbsent(routeKey,
-                            new Mapping(controller, method.getName(), url, httpMethod));
+                            new Mapping(clazz, method, url, httpMethod));
 
                     if (previous != null) {
                         throw new ServletException(
