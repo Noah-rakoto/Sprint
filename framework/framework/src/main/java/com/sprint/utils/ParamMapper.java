@@ -2,13 +2,18 @@ package com.sprint.utils;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -21,7 +26,8 @@ public class ParamMapper {
     /**
      * Mappe les paramètres de la requête HTTP vers les arguments d'une méthode de contrôleur.
      */
-    public static Object[] mapParameters(Method method, HttpServletRequest request, Modelmaison model) {
+    public static Object[] mapParameters(Method method, HttpServletRequest request, HttpServletResponse response,
+            Modelmaison model) {
         Parameter[] params = method.getParameters();
         Object[] args = new Object[params.length];
 
@@ -33,7 +39,11 @@ public class ParamMapper {
                 continue;
             }
 
-            if (type.equals(MySession.class)) {
+            if (type.equals(HttpServletRequest.class)) {
+                args[i] = request;
+            } else if (type.equals(HttpServletResponse.class)) {
+                args[i] = response;
+            } else if (type.equals(MySession.class)) {
                 args[i] = MySession.fromHttpSession(request.getSession(true));
             } else if (type.equals(MapFile.class)) {
                 args[i] = readFile(request, params[i].getName());
@@ -42,7 +52,7 @@ public class ParamMapper {
             } else if (isSimpleType(type)) {
                 args[i] = convert(request.getParameter(params[i].getName()), type);
             } else {
-                args[i] = buildBean(type, request);
+                args[i] = buildBean(type, request, "");
             }
         }
         return args;
@@ -51,38 +61,45 @@ public class ParamMapper {
     private static boolean isSimpleType(Class<?> type) {
         return type.isPrimitive() || type == String.class
                 || Number.class.isAssignableFrom(type)
-                || type == Boolean.class || type == Character.class;
+                || type == Boolean.class || type == Character.class
+                || type == LocalDate.class || type == LocalDateTime.class
+                || type.isEnum();
     }
 
     /**
      * Instancie un bean et remplit ses champs avec les paramètres de requête
      * de même nom (via le setter s'il existe, sinon directement sur le champ).
+     * Un champ objet est rempli récursivement depuis les paramètres "champ.sousChamp"
+     * (ex : user.nom pour Employe.user.nom) ; le préfixe vaut "" au premier niveau.
      */
-    private static Object buildBean(Class<?> type, HttpServletRequest request) {
+    private static Object buildBean(Class<?> type, HttpServletRequest request, String prefix) {
         try {
             Object bean = type.getDeclaredConstructor().newInstance();
-            for (Field field : type.getDeclaredFields()) {
+            for (Field field : allFields(type)) {
                 if (Modifier.isStatic(field.getModifiers())) {
                     continue;
                 }
+                String paramName = prefix + field.getName();
                 Object value;
                 if (field.getType().equals(MapFile.class)) {
-                    value = readFile(request, field.getName());
+                    value = readFile(request, paramName);
                     if (value == null) {
                         continue;
                     }
                 } else if (field.getType().equals(MapFile[].class)) {
-                    MapFile[] files = readFiles(request, field.getName());
+                    MapFile[] files = readFiles(request, paramName);
                     if (files.length == 0) {
                         continue;
                     }
                     value = files;
                 } else if (isSimpleType(field.getType())) {
-                    String raw = request.getParameter(field.getName());
+                    String raw = request.getParameter(paramName);
                     if (raw == null) {
                         continue;
                     }
                     value = convert(raw, field.getType());
+                } else if (hasParamStartingWith(request, paramName + ".")) {
+                    value = buildBean(field.getType(), request, paramName + ".");
                 } else {
                     continue;
                 }
@@ -100,6 +117,36 @@ public class ParamMapper {
             throw new IllegalArgumentException(
                     "Impossible de construire " + type.getName() + " depuis la requête", e);
         }
+    }
+
+    /** Champs de la classe et de ses classes mères (getDeclaredFields ne voit pas l'héritage). */
+    private static List<Field> allFields(Class<?> type) {
+        List<Field> fields = new ArrayList<>();
+        for (Class<?> c = type; c != null && c != Object.class; c = c.getSuperclass()) {
+            fields.addAll(Arrays.asList(c.getDeclaredFields()));
+        }
+        return fields;
+    }
+
+    /** Vrai si la requête contient au moins un paramètre ou un fichier dont le nom commence par start. */
+    private static boolean hasParamStartingWith(HttpServletRequest request, String start) {
+        for (String key : request.getParameterMap().keySet()) {
+            if (key.startsWith(start)) {
+                return true;
+            }
+        }
+        if (isMultipart(request)) {
+            try {
+                for (Part part : request.getParts()) {
+                    if (part.getName().startsWith(start)) {
+                        return true;
+                    }
+                }
+            } catch (IOException | ServletException e) {
+                throw new IllegalArgumentException("Impossible de lire la requête multipart", e);
+            }
+        }
+        return false;
     }
 
     /**
@@ -161,11 +208,25 @@ public class ParamMapper {
             if (type == byte.class || type == Byte.class) return Byte.parseByte(value.trim());
             if (type == boolean.class || type == Boolean.class) return Boolean.parseBoolean(value.trim());
             if (type == char.class || type == Character.class) return value.charAt(0);
-        } catch (NumberFormatException e) {
+            // Formats ISO, ceux des <input type="date"> et <input type="datetime-local">
+            if (type == LocalDate.class) return LocalDate.parse(value.trim());
+            if (type == LocalDateTime.class) return LocalDateTime.parse(value.trim());
+            if (type.isEnum()) return toEnum(value.trim(), type);
+        } catch (NumberFormatException | DateTimeParseException e) {
             throw new IllegalArgumentException(
                     "Valeur '" + value + "' invalide pour le type " + type.getSimpleName(), e);
         }
         return null;
+    }
+
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    private static Object toEnum(String value, Class<?> type) {
+        try {
+            return Enum.valueOf((Class<Enum>) type, value);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Valeur '" + value + "' invalide pour l'enum " + type.getSimpleName(), e);
+        }
     }
 
     static Object defaultValue(Class<?> type) {
