@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sprint.annotation.ApiRest;
+import com.sprint.annotation.Auth;
 import com.sprint.listener.FrameworkContextListener;
 import com.sprint.utils.Mapping;
 import com.sprint.utils.Modelmaison;
@@ -15,6 +16,7 @@ import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -28,6 +30,7 @@ public class FrontController extends HttpServlet {
     private Map<UrlKey, Mapping> listeMapping = new HashMap<>();
     private static final String DEFAULT_SCAN_PACKAGE = "com.test";
     private static final String VIEW_BASE_PATH = "/WEB-INF/views/";
+    private String userSessionKey;
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -43,6 +46,12 @@ public class FrontController extends HttpServlet {
         FrameworkContextListener frameworkContextListener = new FrameworkContextListener();
         frameworkContextListener.initialize(context, scanPackage);
         listeMapping = frameworkContextListener.getRoutes();
+
+        // Sprint 10 : nom de l'attribut de session qui identifie l'utilisateur connecté
+        userSessionKey = context.getInitParameter("auth.user-session-key");
+        if (userSessionKey == null || userSessionKey.isBlank()) {
+            throw new ServletException("Le context-param 'auth.user-session-key' est obligatoire dans web.xml");
+        }
     }
 
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -73,6 +82,13 @@ public class FrontController extends HttpServlet {
             // 2. Résolution de la classe du contrôleur
             Class<?> clazz = Class.forName(match.getClassName());
             Method targetMethod = findMethodByName(clazz, match.getMethodName());
+
+            // 2.b. Contrôle d'accès @Auth (Sprint 10) : avant toute instanciation
+            if (targetMethod.isAnnotationPresent(Auth.class) && !isAuthenticated(request)) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                        "Vous devez être connecté pour accéder à " + routeKey.getUrl());
+                return;
+            }
 
             // 3. Changement majeur : Instanciation manuelle ET injection Spring après coup
             // Étape 3.a : On crée l'objet nous-mêmes par réflexion
@@ -117,6 +133,12 @@ public class FrontController extends HttpServlet {
         String route = uri.substring(contextPath.length());
         String webMethod = request.getMethod();
         return new UrlKey(route, webMethod);
+    }
+
+    // getSession(false) : on ne crée pas de session juste pour vérifier
+    private boolean isAuthenticated(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        return session != null && session.getAttribute(userSessionKey) != null;
     }
 
     private Method findMethodByName(Class<?> clazz, String methodName) throws NoSuchMethodException {
