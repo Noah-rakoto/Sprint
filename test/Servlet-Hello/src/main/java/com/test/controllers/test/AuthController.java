@@ -25,4 +25,33 @@ public class AuthController {
         model.setView("session");
         return model;
     }
+
+    // Sprint 10 bis : /auth/login?nom=Alice&role=admin
+    @Methode(value = "/auth/login", type = "GET")
+    public Modelmaison login(String nom, String role, MySession session, Modelmaison model) {
+        session.setAttribute("user", nom);
+        session.setAttribute("role", role);
+        model.addAttribute("message", "Connecte en tant que " + nom + " (role " + role + ")");
+        model.setView("session");
+        return model;
+    }
+
+    // Sprint 10 bis : 401 si pas connecte, 403 si le role n'est pas admin
+    @Auth(roles = { "admin" })
+    @Methode(value = "/auth/admin", type = "GET")
+    public Modelmaison admin(MySession session, Modelmaison model) {
+        model.addAttribute("message", "Zone admin : bienvenue " + session.getAttribute("user"));
+        model.setView("session");
+        return model;
+    }
+
+    // Sprint 10 bis : plusieurs roles acceptes
+    @Auth(roles = { "admin", "manager" })
+    @Methode(value = "/auth/gestion", type = "GET")
+    public Modelmaison gestion(MySession session, Modelmaison model) {
+        model.addAttribute("message", "Gestion : bienvenue " + session.getAttribute("user")
+                + " (role " + session.getAttribute("role") + ")");
+        model.setView("session");
+        return model;
+    }
 }

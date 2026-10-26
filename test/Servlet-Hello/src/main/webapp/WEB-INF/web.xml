@@ -19,6 +19,12 @@
         <param-value>user</param-value>
     </context-param>
 
+    <!-- Sprint 10 bis : attribut de session qui contient le rôle (@Auth(roles = ...)) -->
+    <context-param>
+        <param-name>auth.role-session-key</param-name>
+        <param-value>role</param-value>
+    </context-param>
+
     <!-- 2. Le Listener de Spring qui charge le contexte au démarrage -->
     <listener>
         <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>

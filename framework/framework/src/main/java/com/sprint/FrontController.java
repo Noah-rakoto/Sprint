@@ -20,6 +20,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.web.context.*;
@@ -31,6 +32,7 @@ public class FrontController extends HttpServlet {
     private static final String DEFAULT_SCAN_PACKAGE = "com.test";
     private static final String VIEW_BASE_PATH = "/WEB-INF/views/";
     private String userSessionKey;
+    private String roleSessionKey;
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -51,6 +53,12 @@ public class FrontController extends HttpServlet {
         userSessionKey = context.getInitParameter("auth.user-session-key");
         if (userSessionKey == null || userSessionKey.isBlank()) {
             throw new ServletException("Le context-param 'auth.user-session-key' est obligatoire dans web.xml");
+        }
+
+        // Sprint 10 bis : nom de l'attribut de session qui contient le rôle
+        roleSessionKey = context.getInitParameter("auth.role-session-key");
+        if (roleSessionKey == null || roleSessionKey.isBlank()) {
+            throw new ServletException("Le context-param 'auth.role-session-key' est obligatoire dans web.xml");
         }
     }
 
@@ -83,11 +91,19 @@ public class FrontController extends HttpServlet {
             Class<?> clazz = Class.forName(match.getClassName());
             Method targetMethod = findMethodByName(clazz, match.getMethodName());
 
-            // 2.b. Contrôle d'accès @Auth (Sprint 10) : avant toute instanciation
-            if (targetMethod.isAnnotationPresent(Auth.class) && !isAuthenticated(request)) {
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
-                        "Vous devez être connecté pour accéder à " + routeKey.getUrl());
-                return;
+            // 2.b. Contrôle d'accès @Auth (Sprint 10 / 10 bis) : avant toute instanciation
+            Auth auth = targetMethod.getAnnotation(Auth.class);
+            if (auth != null) {
+                if (!isAuthenticated(request)) {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                            "Vous devez être connecté pour accéder à " + routeKey.getUrl());
+                    return;
+                }
+                if (!hasRequiredRole(request, auth.roles())) {
+                    response.sendError(HttpServletResponse.SC_FORBIDDEN,
+                            "Rôle insuffisant pour accéder à " + routeKey.getUrl());
+                    return;
+                }
             }
 
             // 3. Changement majeur : Instanciation manuelle ET injection Spring après coup
@@ -139,6 +155,15 @@ public class FrontController extends HttpServlet {
     private boolean isAuthenticated(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         return session != null && session.getAttribute(userSessionKey) != null;
+    }
+
+    // Appelé après isAuthenticated : la session existe forcément
+    private boolean hasRequiredRole(HttpServletRequest request, String[] roles) {
+        if (roles.length == 0) {
+            return true;
+        }
+        Object role = request.getSession(false).getAttribute(roleSessionKey);
+        return role != null && Arrays.asList(roles).contains(role.toString());
     }
 
     private Method findMethodByName(Class<?> clazz, String methodName) throws NoSuchMethodException {
