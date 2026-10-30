@@ -9,6 +9,7 @@ import com.sprint.listener.FrameworkContextListener;
 import com.sprint.utils.Mapping;
 import com.sprint.utils.Modelmaison;
 import com.sprint.utils.MySession;
+import com.sprint.utils.Singelton;
 import com.sprint.utils.ParamMapper;
 import com.sprint.utils.UrlKey;
 import jakarta.servlet.ServletContext;
@@ -34,6 +35,8 @@ public class FrontController extends HttpServlet {
     private WebApplicationContext springContext;
     private String userSessionKey;
     private String roleSessionKey;
+    // Sprint 11 : registre des contrôleurs (nom complet de la classe -> instance unique)
+    private Singelton singelton = new Singelton();
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -53,6 +56,25 @@ public class FrontController extends HttpServlet {
         // Contexte Spring (créé par ContextLoaderListener) : récupéré une seule fois
         springContext = org.springframework.web.context.support.WebApplicationContextUtils
                 .getRequiredWebApplicationContext(context);
+
+        // Sprint 11 : création unique des contrôleurs (singleton).
+        // Doit rester après springContext, nécessaire pour l'injection.
+        // La map est remplie ici uniquement, puis seulement lue par les requêtes.
+        for (Mapping mapping : listeMapping.values()) {
+            Class<?> clazz = mapping.getControllerClass();
+            String nomController = clazz.getName();
+            if (!singelton.containsAttribute(nomController)) {
+                try {
+                    Object controllerInstance = clazz.getDeclaredConstructor().newInstance();
+                    // Sprint 11 : injection (@Autowired) faite une seule fois, avant de ranger l'instance
+                    springContext.getAutowireCapableBeanFactory().autowireBean(controllerInstance);
+                    singelton.setAttribute(nomController, controllerInstance);
+                } catch (Exception e) {
+                    throw new ServletException("Erreur lors de l'instanciation du contrôleur: " + nomController, e);
+                }
+            }
+
+        }
 
         // Sprint 10 : nom de l'attribut de session qui identifie l'utilisateur connecté
         userSessionKey = context.getInitParameter("auth.user-session-key");
@@ -96,7 +118,7 @@ public class FrontController extends HttpServlet {
             Class<?> clazz = match.getControllerClass();
             Method targetMethod = match.getMethod();
 
-            // 2.b. Contrôle d'accès @Auth (Sprint 10 / 10 bis) : avant toute instanciation
+            // 2.b. Contrôle d'accès @Auth (Sprint 10 / 10 bis) : avant d'appeler le contrôleur
             Auth auth = targetMethod.getAnnotation(Auth.class);
             if (auth != null) {
                 if (!isAuthenticated(request)) {
@@ -111,13 +133,9 @@ public class FrontController extends HttpServlet {
                 }
             }
 
-            // 3. Changement majeur : Instanciation manuelle ET injection Spring après coup
-            // Étape 3.a : On crée l'objet nous-mêmes par réflexion
-            Object controllerInstance = clazz.getDeclaredConstructor().newInstance();
-
-            // Étape 3.b : LA LIGNE MAGIQUE qui va injecter ton UtilisateurService (avec son
-            // @Autowired)
-            springContext.getAutowireCapableBeanFactory().autowireBean(controllerInstance);
+            // 3. Sprint 11 : on récupère le contrôleur déjà créé et injecté dans init().
+            // Instance partagée entre les requêtes : ne pas y garder de données de requête.
+            Object controllerInstance = singelton.getAttribute(clazz.getName());
 
             // 4. Préparation du modèle
             Modelmaison model = new Modelmaison();
@@ -134,7 +152,6 @@ public class FrontController extends HttpServlet {
                     ((MySession) arg).applyTo(request.getSession(true));
                 }
             }
-
             // 7. Traitement du résultat (redirection vers la vue)
             handleMethodResult(result, model, clazz, request, response);
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-APP_NAME="Sprint7bis"
+APP_NAME="Sprint11"
 TARGET_DIR="target"
 
 # Chemin du framework
